@@ -20,11 +20,11 @@
 "==============================================================================
 
 " Exit quickly if already running
-if exists("g:dwm_version") || &diff || &cp
+if exists("g:dwm_version") || &cp
   finish
 endif
 
-let g:dwm_version = "0.1.2"
+let g:dwm_version = "0.1.1"
 
 " Check for Vim version 700 or greater {{{1
 if v:version < 700
@@ -75,17 +75,8 @@ function! DWM_New()
 endfunction
 
 " Move the current window to the master pane (the previous master window is
-" added to the top of the stack). If current window is master already - switch
-" to stack top
+" added to the top of the stack)
 function! DWM_Focus()
-  if winnr('$') == 1
-    return
-  endif
-
-  if winnr() == 1
-    wincmd w
-  endif
-
   let l:curwin = winnr()
   call DWM_Stack(1)
   exec l:curwin . "wincmd w"
@@ -93,45 +84,19 @@ function! DWM_Focus()
   call DWM_ResizeMasterPaneWidth()
 endfunction
 
-" Handler for BufWinEnter autocommand
-" Recreate layout broken by new window
-function! DWM_AutoEnter()
-  if winnr('$') == 1
-    return
-  endif
-
-  " Skip buffers without filetype
-  if !len(&l:filetype)
-    return
-  endif
-
-  " Skip quickfix buffers
-  if &l:buftype == 'quickfix'
-    return
-  endif
-
-  " Move new window to stack top
-  wincmd K
-
-  " Focus new window (twice :)
-  call DWM_Focus()
-  call DWM_Focus()
-endfunction
-
 " Close the current window
 function! DWM_Close()
   if winnr() == 1
     " Close master panel.
-    return 'close | wincmd H | call DWM_ResizeMasterPaneWidth()'
+    bd
+    wincmd H
+    call DWM_ResizeMasterPaneWidth()
   else
-    return 'close'
+    bd
   end
 endfunction
 
 function! DWM_ResizeMasterPaneWidth()
-  " Make all windows equally high and wide
-  wincmd =
-
   " resize the master pane if user defined it
   if exists('g:dwm_master_pane_width')
     if type(g:dwm_master_pane_width) == type("")
@@ -148,11 +113,6 @@ function! DWM_GrowMaster()
   else
     exec "vertical resize -1"
   endif
-  if exists("g:dwm_master_pane_width") && g:dwm_master_pane_width
-    let g:dwm_master_pane_width += 1
-  else
-    let g:dwm_master_pane_width = ((&columns)/2)+1
-  endif
 endfunction
 
 function! DWM_ShrinkMaster()
@@ -160,11 +120,6 @@ function! DWM_ShrinkMaster()
     exec "vertical resize -1"
   else
     exec "vertical resize +1"
-  endif
-  if exists("g:dwm_master_pane_width") && g:dwm_master_pane_width
-    let g:dwm_master_pane_width -= 1
-  else
-    let g:dwm_master_pane_width = ((&columns)/2)-1
   endif
 endfunction
 
@@ -179,53 +134,21 @@ function! DWM_Rotate(clockwise)
   call DWM_ResizeMasterPaneWidth()
 endfunction
 
-nnoremap <silent> <Plug>DWMRotateCounterclockwise :call DWM_Rotate(0)<CR>
-nnoremap <silent> <Plug>DWMRotateClockwise        :call DWM_Rotate(1)<CR>
-
-nnoremap <silent> <Plug>DWMNew   :call DWM_New()<CR>
-nnoremap <silent> <Plug>DWMClose :exec DWM_Close()<CR>
-nnoremap <silent> <Plug>DWMFocus :call DWM_Focus()<CR>
-
-nnoremap <silent> <Plug>DWMGrowMaster   :call DWM_GrowMaster()<CR>
-nnoremap <silent> <Plug>DWMShrinkMaster :call DWM_ShrinkMaster()<CR>
-
 if !exists('g:dwm_map_keys')
   let g:dwm_map_keys = 1
 endif
 
 if g:dwm_map_keys
-  nnoremap <C-J> <C-W>w
-  nnoremap <C-K> <C-W>W
+  map <C-J> <C-W>w
+  map <C-K> <C-W>W
+  map <C-,> :call DWM_Rotate(0)<CR>
+  map <C-.> :call DWM_Rotate(1)<CR>
 
-  if !hasmapto('<Plug>DWMRotateCounterclockwise')
-      nmap <C-,> <Plug>DWMRotateCounterclockwise
-  endif
-  if !hasmapto('<Plug>DWMRotateClockwise')
-      nmap <C-.> <Plug>DWMRotateClockwise
-  endif
+  map <C-A> :call DWM_New()<CR>
+  map <C-C> :call DWM_Close()<CR>
+  map <C-Space> :call DWM_Focus()<CR>
+  map <C-@> :call DWM_Focus()<CR>
 
-  if !hasmapto('<Plug>DWMNew')
-      nmap <C-A> <Plug>DWMNew
-  endif
-  if !hasmapto('<Plug>DWMClose')
-      nmap <C-C> <Plug>DWMClose
-  endif
-  if !hasmapto('<Plug>DWMFocus')
-      nmap <C-@> <Plug>DWMFocus
-      nmap <C-Space> <Plug>DWMFocus
-  endif
-
-  if !hasmapto('<Plug>DWMGrowMaster')
-      nmap <C-L> <Plug>DWMGrowMaster
-  endif
-  if !hasmapto('<Plug>DWMShrinkMaster')
-      nmap <C-H> <Plug>DWMShrinkMaster
-  endif
-endif
-
-if has('autocmd')
-  augroup dwm
-    au!
-    au BufWinEnter * if &l:buflisted || &l:filetype == 'help' | call DWM_AutoEnter() | endif
-  augroup end
+  map <C-H> :call DWM_GrowMaster()<CR>
+  map <C-L> :call DWM_ShrinkMaster()<CR>
 endif
